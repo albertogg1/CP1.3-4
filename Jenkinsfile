@@ -74,6 +74,7 @@ pipeline{
             steps{
                 echo 'Tests superados: Merge a master'
                 sh '''
+                    git fetch origin
                     git checkout master
                     git pull https://${GITHUB_TOKEN}@github.com/albertogg1/CP1.3.git master
                     
