@@ -11,9 +11,9 @@ pipeline{
                 // Obtener el código fuente desde el repositorio Git (rama develop)
                 echo 'Obteniendo código fuente de rama develop'
                 sh '''rm -rf "$WORKSPACE"/*
-										git clone -b develop https://${GITHUB_TOKEN}@github.com/albertogg1/CP1.3-4.git .
-               			ls -la
-										echo $WORKSPACE'''
+                    git clone -b develop https://${GITHUB_TOKEN}@github.com/albertogg1/CP1.3-4.git .
+               		ls -la
+					echo $WORKSPACE'''
             }
         }
         
@@ -22,7 +22,7 @@ pipeline{
                 echo 'Análisis estático'
                 catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
                     sh '''
-												export PYTHONPATH=$WORKSPACE
+						export PYTHONPATH=$WORKSPACE
                         flake8 --exit-zero --format=pylint --max-line-length=90 src/ > flake8.out
                         bandit -r src/ -f custom -o bandit.out --msg-template "{abspath}:{line}: [{test_id}] {msg}"
                     '''
