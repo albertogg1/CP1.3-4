@@ -8,9 +8,11 @@ pipeline{
     stages{
         stage('Get Code'){
             steps{
+                cleanWs()
+
                 // Obtener el código fuente desde el repositorio Git (rama develop)
                 echo 'Obteniendo código fuente de rama develop'
-                sh '''rm -rf "$WORKSPACE"/*
+                sh '''
                     git clone -b develop https://${GITHUB_TOKEN}@github.com/albertogg1/CP1.3-4.git .
                		ls -la
 					echo $WORKSPACE'''
@@ -46,9 +48,18 @@ pipeline{
         
         stage('Rest Test'){
             steps{
-                echo 'Tests de integración con pytest'
+                script {
+                    env.BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name todo-list-aws-staging --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
+                        returnStdout: true
+                        ).trim()
+                    echo "BASE_URL: ${env.BASE_URL}"
+                }
+ 
                 sh '''
                     export PYTHONPATH=$WORKSPACE
+                    export BASE_URL="${BASE_URL}"
+            
+                    echo "Testing at: $BASE_URL"
                     
                     # Ejecutar tests de integración
                     pytest --junitxml=result-rest.xml test/integration/todoApiTest.py

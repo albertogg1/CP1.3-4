@@ -2,7 +2,7 @@ version = 0.1
 [default]
 [default.deploy]
 [default.deploy.parameters]
-stack_name = "todo-list-aws"
+stack_name = "todo-list-aws-default"
 s3_prefix = "todo-list-aws"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
@@ -13,8 +13,8 @@ resolve_s3 = true
 [staging]
 [staging.deploy]
 [staging.deploy.parameters]
-stack_name = "staging-todo-list-aws"
-s3_prefix = "staging-todo-list-aws"
+stack_name = "todo-list-aws-staging"
+s3_prefix = "todo-list-aws"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = "Stage=\"staging\""
