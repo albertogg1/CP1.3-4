@@ -45,7 +45,7 @@ pipeline{
                     echo "Testing at: $BASE_URL"
                     
                     # Ejecutar tests de integración
-                    pytest -m read --junitxml=result-rest.xml test/integration/todoApiTest.py
+                    pytest -m reto2 --junitxml=result-rest.xml test/integration/todoApiTest.py
                 '''
                 
                 // Publicar resultados de tests

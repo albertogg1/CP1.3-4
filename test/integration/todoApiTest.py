@@ -19,7 +19,7 @@ class TestApi(unittest.TestCase):
         self.assertIsNotNone(BASE_URL, "URL no configurada")
         self.assertTrue(len(BASE_URL) > 8, "URL no configurada")
     
-    @pytest.mark.read
+    @pytest.mark.reto2
     def test_api_listtodos(self):
         print('---------------------------------------')
         print('Starting - integration test List TODO')
@@ -51,7 +51,7 @@ class TestApi(unittest.TestCase):
         
         print('End - integration test List TODO')
     
-    @pytest.mark.write
+    @pytest.mark.reto2
     def test_api_addtodo(self):
         print('---------------------------------------')
         print('Starting - integration test Add TODO')
@@ -78,7 +78,7 @@ class TestApi(unittest.TestCase):
         )
         print('End - integration test Add TODO')
     
-    @pytest.mark.read
+    @pytest.mark.reto2
     def test_api_gettodo(self):
         print('---------------------------------------')
         print('Starting - integration test Get TODO')
@@ -117,7 +117,6 @@ class TestApi(unittest.TestCase):
         )
         print('End - integration test Get TODO')
     
-    @pytest.mark.write
     def test_api_updatetodo(self):
         print('---------------------------------------')
         print('Starting - integration test Update TODO')
@@ -172,7 +171,6 @@ class TestApi(unittest.TestCase):
         )
         print('End - integration test Update TODO')
     
-    @pytest.mark.write
     def test_api_deletetodo(self):
         print('---------------------------------------')
         print('Starting - integration test Delete TODO')
