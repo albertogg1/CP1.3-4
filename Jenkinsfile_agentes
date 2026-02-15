@@ -1,5 +1,5 @@
 pipeline{
-    agent any
+    agent none
     options { skipDefaultCheckout() }
 
     environment {
@@ -7,9 +7,10 @@ pipeline{
     }
     
     stages{
+
         stage('Get Code'){
+            agent any
             steps{
-                agent any
 
                 cleanWs()
 
@@ -26,48 +27,52 @@ pipeline{
             }
         }
         
-        stage('Static Test'){
-            agent { label 'static' }
-            steps{
-                unstash 'source-code'
-                sh '''
-                    echo "=== Información del agente ==="
-                    whoami
-                    hostname
-                    echo "=============================="
-                '''
+        stage('Static Tests y Deploy'){
+            parallel {
+                stage('Static Test'){
+                    agent { label 'static' }
+                    steps{
+                        unstash 'source-code'
+                        sh '''
+                            echo "=== Información del agente ==="
+                            whoami
+                            hostname
+                            echo "=============================="
+                        '''
 
-                echo 'Análisis estático'
-                catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
-                    sh '''
-						export PYTHONPATH=$WORKSPACE
-                        flake8 --exit-zero --format=pylint --max-line-length=90 src/ > flake8.out
-                        bandit -r src/ -f custom -o bandit.out --msg-template "{abspath}:{line}: [{test_id}] {msg}"
-                    '''
+                        echo 'Análisis estático'
+                        catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+                            sh '''
+								export PYTHONPATH=$WORKSPACE
+                                flake8 --exit-zero --format=pylint --max-line-length=90 src/ > flake8.out
+                                bandit -r src/ -f custom -o bandit.out --msg-template "{abspath}:{line}: [{test_id}] {msg}"
+                            '''
 
-                    // Publicar informes
-                    recordIssues tools: [flake8(name: 'Flake8', pattern: 'flake8.out')]
-                    recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')]
+                            // Publicar informes
+                            recordIssues tools: [flake8(name: 'Flake8', pattern: 'flake8.out')]
+                            recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')]
+                        }
+                    }
                 }
-            }
-        }
-        
-        stage('Deploy'){
-            agent any
-            steps{
-                unstash 'source-code'
+                
+                stage('Deploy'){
+                    agent any
+                    steps{
+                        unstash 'source-code'
 
-                echo 'Construyendo y desplegando el proyecto SAM'
-                sh '''
-                    echo "=== Información del agente ==="
-                    whoami
-                    hostname
-                    echo "=============================="
-                    
-                    
-                    sam build
-                    sam deploy --config-env staging --no-confirm-changeset --no-fail-on-empty-changeset
-                '''
+                        echo 'Construyendo y desplegando el proyecto SAM'
+                        sh '''
+                            echo "=== Información del agente ==="
+                            whoami
+                            hostname
+                            echo "=============================="
+                            
+                            
+                            sam build
+                            sam deploy --config-env staging --no-confirm-changeset --no-fail-on-empty-changeset
+                        '''
+                    }
+                }
             }
         }
         
