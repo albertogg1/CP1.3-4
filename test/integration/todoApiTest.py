@@ -19,7 +19,6 @@ class TestApi(unittest.TestCase):
         self.assertIsNotNone(BASE_URL, "URL no configurada")
         self.assertTrue(len(BASE_URL) > 8, "URL no configurada")
     
-    @pytest.mark.reto2
     def test_api_listtodos(self):
         print('---------------------------------------')
         print('Starting - integration test List TODO')
@@ -51,7 +50,6 @@ class TestApi(unittest.TestCase):
         
         print('End - integration test List TODO')
     
-    @pytest.mark.reto2
     def test_api_addtodo(self):
         print('---------------------------------------')
         print('Starting - integration test Add TODO')
@@ -78,7 +76,6 @@ class TestApi(unittest.TestCase):
         )
         print('End - integration test Add TODO')
     
-    @pytest.mark.reto2
     def test_api_gettodo(self):
         print('---------------------------------------')
         print('Starting - integration test Get TODO')
@@ -206,3 +203,17 @@ class TestApi(unittest.TestCase):
         )
         print('End - integration test Delete TODO')
     
+    @pytest.mark.reto2
+    def test_api_health_check(self):
+        """Test de solo lectura - Verifica que la API funciona sin modificar datos"""
+        print('---------------------------------------')
+        print('Starting - Production Health Check (readonly)')
+        
+        url = BASE_URL + "/todos"
+        response = requests.get(url)
+        
+        # Solo verificar que la API responde correctamente
+        self.assertEqual(response.status_code, 200, "API no responde")
+        self.assertIsInstance(response.json(), list, "Response no es una lista")
+        
+        print('End - Production Health Check')
