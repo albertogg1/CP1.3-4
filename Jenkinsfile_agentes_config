@@ -30,7 +30,7 @@ pipeline{
                 sh '''
                     mkdir -p config
                     cd config
-                    git clone -b staging https://${GITHUB_TOKEN}@github.com/albertogg1/todo-list-aws-config.git .
+                    git clone -b production https://${GITHUB_TOKEN}@github.com/albertogg1/todo-list-aws-config.git .
                     cp samconfig.toml ../samconfig.toml
                     cd ..
                     ls -la samconfig.toml
