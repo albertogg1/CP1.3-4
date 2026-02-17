@@ -77,13 +77,13 @@ pipeline{
                     git config merge.ours.driver true
                     git fetch origin
                     git checkout master
-                    git pull https://${GITHUB_TOKEN}@github.com/albertogg1/CP1.3.git master
+                    git pull https://${GITHUB_TOKEN}@github.com/albertogg1/CP1.3-4.git master
                     
                     # Merge desde develop
                     git merge develop -m "Auto merge desde el pipeline CI"
                     
                     # Push a master usando credenciales
-                    git push https://${GITHUB_TOKEN}@github.com/albertogg1/CP1.3.git master
+                    git push https://${GITHUB_TOKEN}@github.com/albertogg1/CP1.3-4.git master
                 '''
             }
         }
