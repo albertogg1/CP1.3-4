@@ -1,5 +1,6 @@
 pipeline{
-    agent any
+    agent none
+    options { skipDefaultCheckout() }
     
     environment {
         GITHUB_TOKEN = credentials('github-token')
@@ -7,22 +8,51 @@ pipeline{
     
     stages{
         stage('Get Code'){
+            agent any
             steps{
                 cleanWs()
-
-                // Obtener el código fuente desde el repositorio Git (rama develop)
+                
+                // Obtener el código fuente desde el repositorio Git (rama master)
                 echo 'Obteniendo código fuente de rama master'
                 sh '''
+                    echo "=== Información del agente ==="
+                    whoami
+                    hostname
+                    echo "=============================="
+                    
                     git clone -b master https://${GITHUB_TOKEN}@github.com/albertogg1/CP1.3-4.git .
                		ls -la
-					echo $WORKSPACE'''
+					echo $WORKSPACE
+                '''
+                        
+                // Descargar configuración
+                echo 'Descargando configuración de staging'
+                sh '''
+                    mkdir -p config
+                    cd config
+                    git clone -b production https://${GITHUB_TOKEN}@github.com/albertogg1/todo-list-aws-config.git .
+                    cp samconfig.toml ../samconfig.toml
+                    cd ..
+                    ls -la samconfig.toml
+                '''
+                
+                // Guardar el código para compartir con otros agentes
+                stash name: 'source-code', includes: '**/*'
             }
         }
                
         stage('Deploy'){
+            agent any
             steps{
+                unstash 'source-code'
+                
                 echo 'Construyendo y desplegando el proyecto SAM'
                 sh '''
+                    echo "=== Información del agente ==="
+                    whoami
+                    hostname
+                    echo "=============================="
+                    
                     sam build
                     sam deploy --config-env production --no-confirm-changeset --no-fail-on-empty-changeset
                 '''
@@ -30,21 +60,31 @@ pipeline{
         }
         
         stage('Rest Test'){
+            agent { label 'rest' }
             steps{
+                unstash 'source-code'
+                
                 script {
-                    env.BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name todo-list-aws-staging --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
+                    env.BASE_URL = sh(
+                        script: "aws cloudformation describe-stacks --stack-name todo-list-aws-production --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
                         returnStdout: true
-                        ).trim()
+                    ).trim()
+                    
                     echo "BASE_URL: ${env.BASE_URL}"
                 }
  
                 sh '''
+                    echo "=== Información del agente ==="
+                    whoami
+                    hostname
+                    echo "=============================="
+                    
                     export PYTHONPATH=$WORKSPACE
                     export BASE_URL="${BASE_URL}"
             
-                    echo "Testing at: $BASE_URL"
+                    echo "Testing Production (readonly) at: $BASE_URL"
                     
-                    # Ejecutar tests de integración
+                    # Ejecutar SOLO tests de lectura (no modifican datos)
                     pytest -m reto2 --junitxml=result-rest.xml test/integration/todoApiTest.py
                 '''
                 
