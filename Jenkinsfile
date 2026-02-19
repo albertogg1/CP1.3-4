@@ -1,13 +1,17 @@
 pipeline{
-    agent any
-    
+    agent none
+    options { skipDefaultCheckout() }
+
     environment {
         GITHUB_TOKEN = credentials('github-token')
     }
     
     stages{
+
         stage('Get Code'){
+            agent any
             steps{
+
                 cleanWs()
 
                 // Obtener el código fuente desde el repositorio Git (rama develop)
@@ -16,38 +20,87 @@ pipeline{
                     git clone -b develop https://${GITHUB_TOKEN}@github.com/albertogg1/CP1.3-4.git .
                		ls -la
 					echo $WORKSPACE'''
+
+
+                // Descargar configuración del repositorio separado
+                echo 'Descargando configuración de staging'
+                sh '''
+                    # Crear directorio para la configuración
+                    mkdir -p config
+                    
+                    # Descargar samconfig.toml de la rama staging
+                    cd config
+                    git clone -b staging https://${GITHUB_TOKEN}@github.com/albertogg1/todo-list-aws-config.git .
+                    
+                    # Copiar samconfig.toml al directorio raíz del proyecto
+                    cp samconfig.toml ../samconfig.toml
+                    cd ..
+                    
+                    # Verificar que se copió correctamente
+                    ls -la samconfig.toml
+                '''
+                
+                // Guardar el código para compartir con otros agentes
+                stash name: 'source-code', includes: '**/*'
             }
         }
         
-        stage('Static Test'){
-            steps{
-                echo 'Análisis estático'
-                catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
-                    sh '''
-						export PYTHONPATH=$WORKSPACE
-                        flake8 --exit-zero --format=pylint --max-line-length=90 src/ > flake8.out
-                        bandit -r src/ -f custom -o bandit.out --msg-template "{abspath}:{line}: [{test_id}] {msg}"
-                    '''
+        stage('Static Tests y Deploy'){
+            parallel {
+                stage('Static Test'){
+                    agent { label 'static' }
+                    steps{
+                        unstash 'source-code'
 
-                    // Publicar informes
-                    recordIssues tools: [flake8(name: 'Flake8', pattern: 'flake8.out')]
-                    recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')]
+                        sh '''
+                            echo "=== Información del agente ==="
+                            whoami
+                            hostname
+                            echo "=============================="
+                        '''
+
+                        echo 'Análisis estático'
+                        catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
+                            sh '''
+								export PYTHONPATH=$WORKSPACE
+                                flake8 --exit-zero --format=pylint --max-line-length=90 src/ > flake8.out
+                                bandit -r src/ -f custom -o bandit.out --msg-template "{abspath}:{line}: [{test_id}] {msg}"
+                            '''
+
+                            // Publicar informes
+                            recordIssues tools: [flake8(name: 'Flake8', pattern: 'flake8.out')]
+                            recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')]
+                        }
+                    }
+                }
+                
+                stage('Deploy'){
+                    agent any
+                    steps{
+                        unstash 'source-code'
+
+                        echo 'Construyendo y desplegando el proyecto SAM'
+                        sh '''
+                            echo "=== Información del agente ==="
+                            whoami
+                            hostname
+                            echo "=============================="
+                            
+                            
+                            sam build
+                            sam deploy --config-env staging --no-confirm-changeset --no-fail-on-empty-changeset
+                        '''
+                    }
                 }
             }
         }
         
-        stage('Deploy'){
-            steps{
-                echo 'Construyendo y desplegando el proyecto SAM'
-                sh '''
-                    sam build
-                    sam deploy --config-env staging --no-confirm-changeset --no-fail-on-empty-changeset
-                '''
-            }
-        }
-        
         stage('Rest Test'){
+            agent { label 'rest' }
             steps{
+                // Recuperar el código
+                unstash 'source-code'
+
                 script {
                     env.BASE_URL = sh( script: "aws cloudformation describe-stacks --stack-name todo-list-aws-staging --query 'Stacks[0].Outputs[?OutputKey==`BaseUrlApi`].OutputValue' --region us-east-1 --output text",
                         returnStdout: true
@@ -56,6 +109,11 @@ pipeline{
                 }
  
                 sh '''
+                    echo "=== Información del agente ==="
+                    whoami
+                    hostname
+                    echo "=============================="
+
                     export PYTHONPATH=$WORKSPACE
                     export BASE_URL="${BASE_URL}"
             
@@ -71,9 +129,17 @@ pipeline{
         }
         
         stage('Promote'){
+            agent any
             steps{
+                unstash 'source-code'
+
                 echo 'Tests superados: Merge a master'
                 sh '''
+                    echo "=== Información del agente ==="
+                    whoami
+                    hostname
+                    echo "=============================="
+                    
                     git config merge.ours.driver true
                     git fetch origin
                     git checkout master
